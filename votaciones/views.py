@@ -39,3 +39,49 @@ class MiLoginView(LoginView):
 
 class MiLogoutView(LogoutView):
     next_page = reverse_lazy('login')
+
+# 4. Vista de Categorias
+def categorias(request, anio):
+    categorias = Categoria.objects.filter(
+        edicion__anio=anio
+    )
+    votaciones = Votacion.objects.filter(
+        categoria__edicion__anio=anio
+    )
+    print(votaciones, 'aksjdhgaskjdh')
+    contexto = {
+            'anio': anio,
+            'categorias': categorias,
+            'votaciones' : votaciones
+        }
+    return render(request, 'categorias.html', contexto)
+
+# 5. Vista de Votaciones
+def votaciones(request, categoriaId):
+    votaciones = Votacion.objects.filter(
+            categoria__id=categoriaId
+        )
+    contexto = {
+            'votaciones' : votaciones
+        }
+    return render(request, 'votaciones.html', contexto)
+
+# 5. Vista de Votacion seleccionada
+def votacionSolicitada(request, votacionId):
+    votacion = Votacion.objects.filter(
+            id=votacionId
+        ).first()
+    contexto = {
+            'votacion' : votacion
+        }
+    return render(request, 'votacion.html', contexto)
+
+# 5. Vista de opciones a votar
+def opciones(request, votacionId):
+    opciones = Opcion.objects.filter(
+            votacion_id=votacionId
+        )
+    contexto = {
+            'opciones' : opciones
+        }
+    return render(request, 'opciones.html', contexto)

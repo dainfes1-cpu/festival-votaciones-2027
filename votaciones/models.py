@@ -42,3 +42,17 @@ class Opcion(models.Model):
 
     def __str__(self):
         return self.nombre
+
+class Voto(models.Model):
+    usuario = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    edicion = models.ForeignKey(Edicion, on_delete=models.CASCADE)
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
+    opcion = models.ForeignKey(Opcion, on_delete=models.CASCADE)
+    fecha_voto = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('usuario', 'categoria', 'edicion')
+        verbose_name_plural = "Votos"
+
+    def __str__(self):
+        return f"{self.usuario.username} votó por {self.opcion.nombre}"

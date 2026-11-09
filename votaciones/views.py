@@ -1,11 +1,14 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.urls import reverse_lazy
-from .models import Edicion, Categoria, Votacion, Opcion
+from .models import Edicion, Categoria, Votacion, Opcion, Voto
 from .forms import RegistroForm
 
-# 1. Vista de la página de inicio
+# --- VISTAS DE LA ENTREGA 2 ---
+
 def inicio(request):
     ediciones = Edicion.objects.all()
     categorias = Categoria.objects.all()
@@ -20,7 +23,6 @@ def inicio(request):
     }
     return render(request, 'inicio.html', contexto)
 
-# 2. Vista de Registro
 def registro(request):
     if request.method == 'POST':
         form = RegistroForm(request.POST)
@@ -32,7 +34,6 @@ def registro(request):
         form = RegistroForm()
     return render(request, 'registro.html', {'form': form})
 
-# 3. Vistas de Login y Logout
 class MiLoginView(LoginView):
     template_name = 'login.html'
     redirect_authenticated_user = True
@@ -40,21 +41,58 @@ class MiLoginView(LoginView):
 class MiLogoutView(LogoutView):
     next_page = reverse_lazy('login')
 
-# 4. Vista de Categorias
-def categorias(request, anio):
-    categorias = Categoria.objects.filter(
-        edicion__anio=anio
-    )
+# --- VISTAS DE LA ENTREGA 3 (VOTACIONES) ---
+
+def lista_categorias(request):
+    edicion_activa = Edicion.objects.filter(activa=True).first()
+    categorias = Categoria.objects.filter(edicion=edicion_activa) if edicion_activa else []
     votaciones = Votacion.objects.filter(
-        categoria__edicion__anio=anio
+        categoria__edicion__anio=edicion_activa.anio
     )
-    print(votaciones, 'aksjdhgaskjdh')
-    contexto = {
-            'anio': anio,
-            'categorias': categorias,
-            'votaciones' : votaciones
-        }
-    return render(request, 'categorias.html', contexto)
+    categorias_votadas = []
+    if request.user.is_authenticated:
+        categorias_votadas = Voto.objects.filter(usuario=request.user, edicion=edicion_activa).values_list('categoria_id', flat=True)
+
+    return render(request, 'categorias.html', {
+        'anio': edicion_activa.anio,
+        'categorias': categorias,
+        'categorias_votadas': categorias_votadas,
+        'votaciones': votaciones,
+    })
+
+@login_required
+def ver_opciones(request, categoria_id):
+    categoria = get_object_or_404(Categoria, id=categoria_id)
+    
+    if Voto.objects.filter(usuario=request.user, categoria=categoria).exists():
+        messages.error(request, "Ya has emitido tu voto en esta categoría.")
+        return redirect('lista_categorias')
+    
+    opciones = Opcion.objects.filter(votacion__categoria=categoria)
+    return render(request, 'opciones.html', {'categoria': categoria, 'opciones': opciones})
+
+@login_required
+def registrar_voto(request):
+    if request.method == 'POST':
+        opcion_id = request.POST.get('opcion_id')
+        opcion = get_object_or_404(Opcion, id=opcion_id)
+        categoria = opcion.votacion.categoria
+        edicion = categoria.edicion
+
+        if Voto.objects.filter(usuario=request.user, categoria=categoria, edicion=edicion).exists():
+            messages.error(request, "Error: Ya has votado en esta categoría.")
+            return redirect('lista_categorias')
+
+        Voto.objects.create(
+            usuario=request.user,
+            categoria=categoria,
+            edicion=edicion,
+            opcion=opcion
+        )
+        messages.success(request, f"¡Voto registrado por {opcion.nombre}!")
+        return redirect('lista_categorias')
+    
+    return redirect('lista_categorias')
 
 # 5. Vista de Votaciones
 def votaciones(request, categoriaId):
@@ -66,7 +104,7 @@ def votaciones(request, categoriaId):
         }
     return render(request, 'votaciones.html', contexto)
 
-# 5. Vista de Votacion seleccionada
+# 6. Vista de Votacion seleccionada
 def votacionSolicitada(request, votacionId):
     votacion = Votacion.objects.filter(
             id=votacionId
@@ -76,7 +114,8 @@ def votacionSolicitada(request, votacionId):
         }
     return render(request, 'votacion.html', contexto)
 
-# 5. Vista de opciones a votar
+# 7. Vista de opciones a votar
+@login_required
 def opciones(request, votacionId):
     opciones = Opcion.objects.filter(
             votacion_id=votacionId

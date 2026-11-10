@@ -8,21 +8,10 @@
 <style>
 body { background: #f5f5f5; }
 .header { background: #1a237e; color: white; padding: 15px; text-align: center; }
-.form-card { background: white; border-radius: 15px; padding: 25px; margin-top: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.btn-dorado { background: #fbc02d; color: #1a237e; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 25px; }
-.card-opcion { background: white; border-radius: 15px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.badge-votaciones {
-    display: inline-block;
-    background-color: #FFF1B8;
-    color: #A66A00;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 6px 20px;
-    border-radius: 10px;
-    text-align: center;
-    line-height: 1.2;
-    min-width: 117px;
-}
+.card-opcion { background: white; border-radius: 15px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+.btn-dorado { background: #fbc02d; color: #1a237e; font-weight: bold; border: none; padding: 10px 20px; border-radius: 20px; text-decoration: none; }
+.btn-disabled { background: #e0e0e0; color: #888; border: none; padding: 10px 20px; border-radius: 20px; cursor: not-allowed; }
+.badge-info { background-color: #FFF1B8; color: #A66A00; font-size: 12px; padding: 5px 15px; border-radius: 10px; display: inline-block; margin-top: 5px; }
 </style>
 </head>
 <body>
@@ -30,35 +19,45 @@ body { background: #f5f5f5; }
   <h4>🗂️ Categorías</h4>
 </div>
 
-<div class="container">
-  <div class="container py-4">
-    <h5 class="text-left mb-3">Edición activa: Festival {{ anio }}</h5>
-  
-    <!-- Aquí inyectamos los datos de la base de datos MySQL -->
-    {% for categoria in categorias %}
-      <div class="card-opcion">
-        {% for votaciones in votaciones %}
-          <h5>🏆 {{ categoria.nombre }}</h5>
-        {% endfor %}
-        <br>
-        <span class="badge-votaciones">
-          {{ votaciones.count }} 
-          {% if votaciones.count > 1 %}
-            votaciones
-          {% else %}
-            votación
-          {% endif %}
-        </span>
-        <br><br>
-        <a href="{% url 'votaciones' categoria.id %}" class="btn btn-dorado btn-sm">Explorar votaciones</a>
+<div class="container py-4">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
-    {% empty %}
-        <div class="alert alert-info text-center">
-            Aún no hay categorías registradas en el sistema.
-        </div>
     {% endfor %}
+  {% endif %}
+
+  <h5 class="text-left mb-3">Edición activa: Festival {{ edicion.anio }}</h5>
+
+  {% for categoria in categorias %}
+    <div class="card-opcion">
+      <div>
+        <h5>🏆 {{ categoria.nombre }}</h5>
+        <span class="badge-info">
+          {{ categoria.votaciones.count }} 
+          {% if categoria.votaciones.count > 1 %}votaciones{% else %}votación{% endif %}
+        </span>
+      </div>
+      
+      <div>
+        {% if categoria.id in categorias_votadas %}
+          <!-- Si el usuario ya votó, muestra el botón bloqueado -->
+          <button class="btn-disabled" disabled>✅ Ya votaste</button>
+        {% else %}
+          <!-- Si no ha votado, muestra el botón normal -->
+          <a href="{% url 'ver_opciones' categoria.id %}" class="btn btn-dorado">Explorar votaciones</a>
+        {% endif %}
+      </div>
     </div>
+  {% empty %}
+    <div class="alert alert-info text-center">
+      Aún no hay categorías registradas en el sistema.
+    </div>
+  {% endfor %}
 </div>
+
 <footer class="text-center py-3 text-muted">
   <small>© 2027 Fundación Festival de la Leyenda Vallenata</small>
 </footer>

@@ -45,19 +45,24 @@ class MiLogoutView(LogoutView):
 
 def lista_categorias(request):
     edicion_activa = Edicion.objects.filter(activa=True).first()
-    categorias = Categoria.objects.filter(edicion=edicion_activa) if edicion_activa else []
-    votaciones = Votacion.objects.filter(
-        categoria__edicion__anio=edicion_activa.anio
-    )
+    categorias = []
     categorias_votadas = []
-    if request.user.is_authenticated:
-        categorias_votadas = Voto.objects.filter(usuario=request.user, edicion=edicion_activa).values_list('categoria_id', flat=True)
+
+    if edicion_activa:
+        # Traemos las categorías sin duplicados (usando distinct)
+        categorias = Categoria.objects.filter(edicion=edicion_activa).distinct()
+        
+        # Verificamos en qué categorías ya votó el usuario
+        if request.user.is_authenticated:
+            categorias_votadas = Voto.objects.filter(
+                usuario=request.user, 
+                edicion=edicion_activa
+            ).values_list('categoria_id', flat=True)
 
     return render(request, 'categorias.html', {
-        'anio': edicion_activa.anio,
+        'edicion': edicion_activa,
         'categorias': categorias,
-        'categorias_votadas': categorias_votadas,
-        'votaciones': votaciones,
+        'categorias_votadas': categorias_votadas
     })
 
 @login_required
@@ -124,3 +129,20 @@ def opciones(request, votacionId):
             'opciones' : opciones
         }
     return render(request, 'opciones.html', contexto)
+
+from django.http import JsonResponse
+
+def api_categorias(request):
+    edicion_activa = Edicion.objects.filter(activa=True).first()
+    categorias = Categoria.objects.filter(edicion=edicion_activa)
+    
+    data = []
+    for cat in categorias:
+        opciones = Opcion.objects.filter(votacion__categoria=cat)
+        data.append({
+            'id': cat.id,
+            'nombre': cat.nombre,
+            'opciones': [{'id': op.id, 'nombre': op.nombre} for op in opciones]
+        })
+    
+    return JsonResponse({'categorias': data})

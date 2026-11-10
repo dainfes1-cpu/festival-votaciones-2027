@@ -78,7 +78,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'db_festival',  
         'USER': 'root',
-        'PASSWORD': 'aqui va la clave ', 
+        'PASSWORD': 'Vallenato2026*', 
         'HOST': 'localhost',
         'PORT': '3306',
     }

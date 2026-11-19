@@ -26,7 +26,7 @@
                         <i class="bi bi-tag-fill"></i> {{ votacion.categoria.nombre }} <br>
                         <small>Edición {{ votacion.categoria.edicion.anio }}</small>
                     </p>
-                    <a href="{% url 'lista_categorias' %}" class="btn btn-dorado w-100">Ver categorías</a>
+                    <a href="{% url 'lista_categorias_votacion' votacion.id %}" class="btn btn-dorado w-100">Ver categorías</a>
                 </div>
             </div>
         </div>

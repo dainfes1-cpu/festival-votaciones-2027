@@ -87,9 +87,12 @@ TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# ... (resto de tu settings)
+
 STATIC_URL = 'static/'
 
+# 👇 NUEVAS LÍNEAS PARA ARREGLAR EL ERROR 404
+LOGIN_URL = 'login' 
 LOGIN_REDIRECT_URL = 'inicio'
 
 # Email

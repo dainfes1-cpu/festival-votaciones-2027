@@ -1,17 +1,39 @@
 {% extends 'base.html' %}
-{% block title %}Resultados Oficiales{% endblock %}
+{% block title %}Dashboard de Resultados{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold"><i class="bi bi-bar-chart-fill text-primary"></i> Dashboard de Resultados</h3>
         {% if edicion %}
-            <span class="badge bg-primary fs-6 rounded-pill px-3">Edición {{ edicion.anio }}</span>
+            <span class="badge bg-primary fs-6 rounded-pill px-3 py-2">Edición {{ edicion.anio }}</span>
         {% endif %}
     </div>
 
-    <!-- Fila de Gráficos -->
-    <div class="row g-4 mb-4">
+    <!-- 1. TARJETAS DE RESUMEN (Nuevas) -->
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-12 col-md-4">
+            <div class="card card-custom p-4 h-100">
+                <h1 class="fw-bold text-primary mb-0">{{ total_votos }}</h1>
+                <p class="text-muted mb-0 fw-bold">Votos Totales</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-custom p-4 h-100">
+                <h1 class="fw-bold text-success mb-0">{{ total_categorias }}</h1>
+                <p class="text-muted mb-0 fw-bold">Categorías Activas</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-custom p-4 h-100">
+                <h1 class="fw-bold text-warning mb-0">{{ total_participantes }}</h1>
+                <p class="text-muted mb-0 fw-bold">Participantes</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. GRÁFICOS -->
+    <div class="row g-4 mb-5">
         <!-- Gráfico de Barras -->
         <div class="col-12 col-lg-8">
             <div class="card card-custom p-4 h-100">
@@ -28,15 +50,16 @@
         </div>
     </div>
 
-    <!-- Listado de Tarjetas (Como ya lo tenías) -->
-    <h4 class="fw-bold mb-3 mt-5">Detalle de Votaciones</h4>
+    <!-- 3. LISTADO DETALLADO (Tarjetas por Opción) -->
+    <h4 class="fw-bold mb-3 mt-4">Detalle de Votaciones</h4>
     <div class="row g-4">
         {% for opcion in resultados %}
         <div class="col-12 col-md-6 col-lg-4">
             <div class="card card-custom p-4 h-100">
                 <h5 class="fw-bold">{{ opcion.nombre }}</h5>
                 <p class="text-muted small mb-3">
-                    <i class="bi bi-tag"></i> {{ opcion.votacion.categoria.nombre }}
+                    <i class="bi bi-tag-fill"></i> {{ opcion.votacion.categoria.nombre }} <br>
+                    <span class="text-secondary" style="font-size: 0.8rem;">{{ opcion.votacion.nombre }}</span>
                 </p>
                 <div class="d-flex justify-content-between align-items-center mt-auto">
                     <span class="fs-3 fw-bold text-primary">{{ opcion.total_votos }} <small class="fs-6 text-muted">Votos</small></span>
@@ -46,10 +69,19 @@
                         <span class="badge bg-secondary rounded-pill">Sin votos</span>
                     {% endif %}
                 </div>
+                <!-- Barra de progreso visual -->
+                <div class="progress mt-3" style="height: 8px;">
+                    <!-- Calculamos el porcentaje basado en el total de votos de la edición -->
+                    <div class="progress-bar bg-warning" role="progressbar" 
+                         style="width: {% if total_votos > 0 %}{% widthratio opcion.total_votos total_votos 100 %}{% else %}0{% endif %}%;">
+                    </div>
+                </div>
             </div>
         </div>
         {% empty %}
-        <div class="col-12"><div class="alert alert-info">Aún no hay votos registrados en esta edición.</div></div>
+        <div class="col-12">
+            <div class="alert alert-info text-center shadow-sm">Aún no hay votos registrados en esta edición.</div>
+        </div>
         {% endfor %}
     </div>
 </div>
@@ -65,10 +97,10 @@
         new Chart(ctxBarras, {
             type: 'bar',
             data: {
-                labels: {{ nombres_opciones|safe }}, // Lista de Python a JS
+                labels: {{ nombres_opciones|safe }}, 
                 datasets: [{
                     label: 'Total de Votos',
-                    data: {{ votos_opciones|safe }}, // Lista de Python a JS
+                    data: {{ votos_opciones|safe }}, 
                     backgroundColor: '#fbc02d', // Color Dorado
                     borderColor: '#1a237e',
                     borderWidth: 1,
@@ -96,7 +128,7 @@
                 datasets: [{
                     data: {{ votos_categorias|safe }},
                     backgroundColor: [
-                        '#1a237e', '#fbc02d', '#3949ab', '#ffb300', '#283593'
+                        '#1a237e', '#fbc02d', '#3949ab', '#ffb300', '#283593', '#ffca28', '#5c6bc0'
                     ],
                     borderWidth: 0
                 }]

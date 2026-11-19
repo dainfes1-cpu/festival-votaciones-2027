@@ -16,9 +16,15 @@ from .forms import RegistroForm
 # --- VISTAS DE LA ENTREGA 2 (BASE) ---
 
 def inicio(request):
+    ahora = timezone.now()
     ediciones = Edicion.objects.all()
     categorias = Categoria.objects.all()
-    votaciones = Votacion.objects.all()
+    
+    # Solo mostramos votaciones que estén activas en fechas
+    votaciones = Votacion.objects.filter(
+        fecha_inicio__lte=ahora, 
+        fecha_fin__gte=ahora
+    )
     opciones = Opcion.objects.all()
     
     contexto = {
@@ -50,13 +56,20 @@ class MiLogoutView(LogoutView):
 
 # --- VISTAS DE LA ENTREGA 3 Y 4 (VOTACIONES Y RESULTADOS) ---
 
-def lista_categorias(request):
+def lista_categorias(request, votacion_id=None):
     edicion_activa = Edicion.objects.filter(activa=True).first()
     categorias = []
     categorias_votadas = []
+    votacion_actual = None
 
     if edicion_activa:
-        categorias = Categoria.objects.filter(edicion=edicion_activa).distinct()
+        if votacion_id:
+            # Filtramos las categorías que pertenecen a la votación seleccionada
+            votacion_actual = get_object_or_404(Votacion, id=votacion_id)
+            categorias = Categoria.objects.filter(edicion=edicion_activa, votaciones=votacion_actual).distinct()
+        else:
+            # Si no viene votación, mostramos todas
+            categorias = Categoria.objects.filter(edicion=edicion_activa).distinct()
         
         if request.user.is_authenticated:
             categorias_votadas = Voto.objects.filter(
@@ -67,13 +80,21 @@ def lista_categorias(request):
     return render(request, 'categorias.html', {
         'edicion': edicion_activa,
         'categorias': categorias,
-        'categorias_votadas': categorias_votadas
+        'categorias_votadas': categorias_votadas,
+        'votacion_actual': votacion_actual
     })
 
 @login_required
 def ver_opciones(request, categoria_id):
     categoria = get_object_or_404(Categoria, id=categoria_id)
+    ahora = timezone.now()
     
+    # Validar que la votación esté abierta antes de mostrar opciones
+    votacion = Votacion.objects.filter(categoria=categoria).first()
+    if votacion and not (votacion.fecha_inicio <= ahora <= votacion.fecha_fin):
+        messages.error(request, "Esta votación ya se encuentra cerrada.")
+        return redirect('lista_categorias')
+
     # Validar si ya votó en esta categoría
     if Voto.objects.filter(usuario=request.user, categoria=categoria).exists():
         messages.error(request, "Ya has emitido tu voto en esta categoría.")
@@ -102,17 +123,17 @@ def registrar_voto(request):
             messages.error(request, "Esta edición está cerrada. No se permiten votos.")
             return redirect('lista_categorias')
 
-        # 2. Validar que estemos dentro del rango de fechas de la votación
+        # 2. Validar que estemos dentro del rango de fechas
         if not (votacion.fecha_inicio <= ahora <= votacion.fecha_fin):
             messages.error(request, "La votación está cerrada o no ha comenzado.")
             return redirect('lista_categorias')
 
-        # 3. Validar duplicados antes de intentar guardar
+        # 3. Validar duplicados
         if Voto.objects.filter(usuario=request.user, categoria=categoria, edicion=edicion).exists():
             messages.error(request, "Error: Ya has votado en esta categoría.")
             return redirect('lista_categorias')
 
-        # 4. Registrar el voto con manejo de errores de integridad
+        # 4. Registrar el voto
         try:
             Voto.objects.create(
                 usuario=request.user,
@@ -122,14 +143,13 @@ def registrar_voto(request):
             )
             messages.success(request, f"¡Voto registrado por {opcion.nombre}!")
         except IntegrityError:
-            # Esto captura si dos peticiones idénticas llegan al mismo tiempo (concurrencia)
             messages.error(request, "Error de integridad: Tu voto ya fue registrado.")
             
         return redirect('lista_categorias')
     
     return redirect('lista_categorias')
 
-# --- VISTA DE RESULTADOS CON DATOS PARA GRÁFICOS (SOLO ADMIN) ---
+# --- VISTA DE RESULTADOS CON TARJETAS RESUMEN Y GRÁFICOS (SOLO ADMIN) ---
 
 @staff_member_required
 def resultados(request):
@@ -138,17 +158,22 @@ def resultados(request):
     if not edicion_activa:
         return render(request, 'resultados.html', {'resultados': [], 'edicion': None})
 
-    # 1. Resultados agrupados por opción (para las tarjetas y el gráfico de barras)
+    # 1. Datos para las tarjetas de resumen
+    total_votos = Voto.objects.filter(edicion=edicion_activa).count()
+    total_categorias = Categoria.objects.filter(edicion=edicion_activa).count()
+    total_participantes = Opcion.objects.filter(votacion__categoria__edicion=edicion_activa).count()
+
+    # 2. Resultados agrupados por opción (Tarjetas y Gráfico de Barras)
     resultados_data = Opcion.objects.filter(
         votacion__categoria__edicion=edicion_activa
     ).annotate(total_votos=Count('voto')).order_by('-total_votos')
 
-    # 2. Datos para el gráfico circular (votos por categoría)
+    # 3. Datos para el gráfico circular (Votos por categoría)
     votos_por_categoria = Categoria.objects.filter(
         edicion=edicion_activa
     ).annotate(total=Count('voto')).order_by('-total')
 
-    # 3. Preparar listas para pasar a JavaScript (Chart.js)
+    # 4. Preparar listas para Chart.js
     nombres_opciones = [op.nombre for op in resultados_data]
     votos_opciones = [op.total_votos for op in resultados_data]
     
@@ -158,6 +183,9 @@ def resultados(request):
     contexto = {
         'resultados': resultados_data,
         'edicion': edicion_activa,
+        'total_votos': total_votos,
+        'total_categorias': total_categorias,
+        'total_participantes': total_participantes,
         'nombres_opciones': nombres_opciones,
         'votos_opciones': votos_opciones,
         'nombres_categorias': nombres_categorias,

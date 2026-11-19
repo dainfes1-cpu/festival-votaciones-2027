@@ -22,6 +22,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
         }
         /* Navbar personalizado */
         .navbar { background-color: var(--azul-festival); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -50,17 +51,57 @@
             border-radius: 16px;
             background: #fff;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            transition: transform 0.2s, background-color 0.3s;
             overflow: hidden;
         }
         .card-custom:hover { transform: translateY(-5px); }
 
         /* Footer */
-        footer { margin-top: auto; background: #fff; padding: 20px 0; border-top: 1px solid #eee; }
+        footer { margin-top: auto; background: #fff; padding: 20px 0; border-top: 1px solid #eee; transition: background-color 0.3s; }
         
         /* Efecto de carga */
         main { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- MODO OSCURO --- */
+        body.modo-oscuro {
+            --fondo-claro: #121212;
+            background-color: var(--fondo-claro) !important;
+            color: #e0e0e0;
+        }
+        body.modo-oscuro .card-custom,
+        body.modo-oscuro footer,
+        body.modo-oscuro .modal-content {
+            background-color: #1e1e1e !important;
+            color: #e0e0e0;
+        }
+        body.modo-oscuro h1, body.modo-oscuro h2, body.modo-oscuro h3, 
+        body.modo-oscuro h4, body.modo-oscuro h5, body.modo-oscuro .text-dark {
+            color: #ffffff !important;
+        }
+        body.modo-oscuro .text-muted {
+            color: #a0a0a0 !important;
+        }
+        body.modo-oscuro .bg-light {
+            background-color: #2c2c2c !important;
+            color: white;
+            border: 1px solid #444;
+        }
+        body.modo-oscuro .dropdown-menu {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+        body.modo-oscuro .dropdown-item {
+            color: #e0e0e0;
+        }
+        body.modo-oscuro .dropdown-item:hover {
+            background-color: #2c2c2c;
+        }
+        body.modo-oscuro .alert-info {
+            background-color: #1a2a3a;
+            color: #8bc34a;
+            border-color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -76,10 +117,18 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
+                    
+                    <!-- Botón de Modo Oscuro (Siempre visible) -->
+                    <li class="nav-item me-2">
+                        <button class="btn btn-link nav-link" id="btnModoOscuro" title="Cambiar tema">
+                            <i class="bi bi-moon-fill fs-5" id="iconoTema"></i>
+                        </button>
+                    </li>
+
                     {% if user.is_authenticated %}
                         <li class="nav-item"><a class="nav-link" href="{% url 'lista_categorias' %}">Categorías</a></li>
                         
-                        <!-- 👇 NUEVO: Enlace visible SOLO para administradores (staff) -->
+                        <!-- Enlace visible SOLO para administradores (staff) -->
                         {% if user.is_staff %}
                             <li class="nav-item">
                                 <a class="nav-link text-warning" href="{% url 'resultados' %}">
@@ -92,7 +141,6 @@
                                 </a>
                             </li>
                         {% endif %}
-                        <!-- 👆 FIN DEL BLOQUE NUEVO -->
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -140,5 +188,34 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script para el Modo Oscuro -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const btnTema = document.getElementById('btnModoOscuro');
+            const iconoTema = document.getElementById('iconoTema');
+            const body = document.body;
+
+            // Verifica si el usuario ya había elegido el modo oscuro antes
+            if (localStorage.getItem('tema') === 'oscuro') {
+                body.classList.add('modo-oscuro');
+                if(iconoTema) iconoTema.classList.replace('bi-moon-fill', 'bi-sun-fill');
+            }
+
+            if (btnTema) {
+                btnTema.addEventListener('click', function() {
+                    body.classList.toggle('modo-oscuro');
+                    
+                    if (body.classList.contains('modo-oscuro')) {
+                        localStorage.setItem('tema', 'oscuro');
+                        if(iconoTema) iconoTema.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                    } else {
+                        localStorage.setItem('tema', 'claro');
+                        if(iconoTema) iconoTema.classList.replace('bi-sun-fill', 'bi-moon-fill');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

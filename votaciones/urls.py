@@ -20,4 +20,5 @@ urlpatterns = [
     
     # API (Descomentada)
     path('api/categorias/', views.api_categorias, name='api_categorias'),
+     path('resultados/', views.resultados, name='resultados'),
 ]

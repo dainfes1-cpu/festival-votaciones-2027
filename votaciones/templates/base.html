@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Votaciones Festival Vallenato 2027{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Google Fonts (Poppins) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --azul-festival: #1a237e;
+            --dorado-festival: #fbc02d;
+            --fondo-claro: #f4f6f9;
+        }
+        body { 
+            background-color: var(--fondo-claro); 
+            font-family: 'Poppins', sans-serif; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        /* Navbar personalizado */
+        .navbar { background-color: var(--azul-festival); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .navbar-brand, .nav-link { color: white !important; font-weight: 600; }
+        .nav-link:hover { color: var(--dorado-festival) !important; transition: 0.3s; }
+        
+        /* Botones */
+        .btn-dorado { 
+            background: var(--dorado-festival); 
+            color: var(--azul-festival); 
+            font-weight: 700; 
+            border-radius: 50px; 
+            padding: 10px 25px;
+            border: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-dorado:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(251, 192, 45, 0.4); 
+            color: var(--azul-festival);
+        }
+        
+        /* Tarjetas */
+        .card-custom {
+            border: none;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            overflow: hidden;
+        }
+        .card-custom:hover { transform: translateY(-5px); }
+
+        /* Footer */
+        footer { margin-top: auto; background: #fff; padding: 20px 0; border-top: 1px solid #eee; }
+        
+        /* Efecto de carga */
+        main { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- Barra de Navegación -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'inicio' %}">
+                <i class="bi bi-music-note-beamed"></i> Festival Vallenato
+            </a>
+            <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="bi bi-list fs-1"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'lista_categorias' %}">Categorías</a></li>
+                        
+                        <!-- 👇 NUEVO: Enlace visible SOLO para administradores (staff) -->
+                        {% if user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link text-warning" href="{% url 'resultados' %}">
+                                    <i class="bi bi-bar-chart-fill"></i> Resultados
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-info" href="/admin/" target="_blank">
+                                    <i class="bi bi-gear-fill"></i> Admin
+                                </a>
+                            </li>
+                        {% endif %}
+                        <!-- 👆 FIN DEL BLOQUE NUEVO -->
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i> {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Iniciar sesión</a></li>
+                        <li class="nav-item ms-2"><a href="{% url 'registro' %}" class="btn btn-dorado btn-sm">Registrarse</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mensajes Globales (Alertas) -->
+    <div class="container mt-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Contenido Principal -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-muted">
+        <small>© 2027 Fundación Festival de la Leyenda Vallenata</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,47 +1,36 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Iniciar sesión</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-body { background: #f5f5f5; }
-.header { background: #1a237e; color: white; padding: 15px; text-align: center; }
-.form-card { background: white; border-radius: 15px; padding: 25px; margin-top: 50px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.btn-dorado { background: #fbc02d; color: #1a237e; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 25px; }
-</style>
-</head>
-<body>
-<div class="header"><h4>🔐 Iniciar sesión</h4></div>
-<div class="container">
-  <div class="form-card">
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-3">
-        <label class="form-label">Usuario</label>
-        <input type="text" name="username" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Contraseña</label>
-        <input type="password" name="password" class="form-control" required>
-      </div>
-      
-      {% if form.errors %}
-        <div class="alert alert-danger p-2 small">
-            Usuario o contraseña incorrectos.
-        </div>
-      {% endif %}
+{% extends 'base.html' %}
+{% block title %}Iniciar Sesión{% endblock %}
 
-      <button type="submit" class="btn btn-dorado">Entrar</button>
-    </form>
-    <p class="text-center mt-3">
-      <a href="{% url 'registro' %}">Crear cuenta nueva</a>
-    </p>
-  </div>
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card card-custom p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <i class="bi bi-shield-lock-fill fs-1 text-primary"></i>
+                    <h3 class="fw-bold mt-2">Bienvenido</h3>
+                    <p class="text-muted small">Ingresa tus credenciales para votar</p>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Usuario</label>
+                        <input type="text" name="username" class="form-control form-control-lg bg-light" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Contraseña</label>
+                        <input type="password" name="password" class="form-control form-control-lg bg-light" required>
+                    </div>
+                    {% if form.errors %}
+                        <div class="alert alert-danger p-2 small rounded-3">Usuario o contraseña incorrectos.</div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-dorado w-100 btn-lg">Ingresar</button>
+                </form>
+                <p class="text-center mt-4 mb-0 small">
+                    ¿No tienes cuenta? <a href="{% url 'registro' %}" class="fw-bold text-decoration-none">Regístrate aquí</a>
+                </p>
+            </div>
+        </div>
+    </div>
 </div>
-<footer class="text-center py-3 text-muted">
-  <small>© 2027 Fundación Festival de la Leyenda Vallenata</small>
-</footer>
-</body>
-</html>
+{% endblock %}

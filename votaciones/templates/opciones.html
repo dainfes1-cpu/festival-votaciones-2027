@@ -1,47 +1,48 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Opciones - {{ categoria.nombre }}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-body { background: #f5f5f5; }
-.header { background: #1a237e; color: white; padding: 15px; text-align: center; }
-.opcion-card { background: white; border: 2px solid #e0e0e0; border-radius: 15px; padding: 20px; margin-bottom: 15px; display: flex; align-items: center; cursor: pointer; }
-.btn-dorado { background: #fbc02d; color: #1a237e; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 25px; }
-</style>
-</head>
-<body>
-<div class="header">
-  <h4>Opciones: {{ categoria.nombre }}</h4>
+{% extends 'base.html' %}
+{% block title %}Votar - {{ categoria.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            
+            <div class="text-center mb-4">
+                <h3 class="fw-bold text-dark">Selecciona tu favorito</h3>
+                <p class="text-muted">{{ categoria.nombre }}</p>
+            </div>
+
+            <form method="post" action="{% url 'registrar_voto' %}">
+                {% csrf_token %}
+                
+                <div class="row g-3 mb-4">
+                    {% for opcion in opciones %}
+                    <div class="col-12">
+                        <label class="card card-custom p-3 w-100 cursor-pointer" style="cursor: pointer; transition: 0.3s;" onmouseover="this.style.border='2px solid #fbc02d'" onmouseout="this.style.border='none'">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="opcion_id" value="{{ opcion.id }}" required class="form-check-input me-3 fs-4 mt-0">
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">{{ opcion.nombre }}</h5>
+                                    <small class="text-muted"><i class="bi bi-music-note"></i> {{ opcion.votacion.nombre }}</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning text-center">No hay opciones registradas para votar.</div>
+                    {% endfor %}
+                </div>
+
+                {% if opciones %}
+                <div class="text-center">
+                    <button type="submit" class="btn btn-dorado btn-lg px-5">Confirmar Voto</button>
+                </div>
+                {% endif %}
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'lista_categorias' %}" class="text-muted text-decoration-none"><i class="bi bi-arrow-left"></i> Volver a categorías</a>
+            </div>
+        </div>
+    </div>
 </div>
-
-<div class="container py-4">
-  <h5 class="mb-3">Selecciona un participante</h5>
-
-  <!-- FORMULARIO POST HACIA LA VISTA registrar_voto -->
-  <form method="post" action="{% url 'registrar_voto' %}">
-    {% csrf_token %}
-    
-    {% for opcion in opciones %}
-    <label class="opcion-card w-100">
-      <input type="radio" name="opcion_id" value="{{ opcion.id }}" required class="me-3" style="transform: scale(1.5);">
-      <div>
-        <h5 class="mb-0">{{ opcion.nombre }}</h5>
-        <small class="text-muted">Votación: {{ opcion.votacion.nombre }}</small>
-      </div>
-    </label>
-    {% empty %}
-    <div class="alert alert-warning">No hay opciones registradas.</div>
-    {% endfor %}
-
-    <button type="submit" class="btn btn-dorado mt-3">Continuar</button>
-  </form>
-  
-  <div class="text-center mt-3">
-    <a href="{% url 'lista_categorias' %}" class="text-muted">← Volver a categorías</a>
-  </div>
-</div>
-</body>
-</html>
+{% endblock %}

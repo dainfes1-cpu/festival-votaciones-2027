@@ -8,8 +8,7 @@ from django.db.models import Count
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.http import JsonResponse
-from django.db import IntegrityError
-
+from django.db import IntegrityError, transaction
 from .models import Edicion, Categoria, Votacion, Opcion, Voto
 from .forms import RegistroForm
 
@@ -105,51 +104,75 @@ def ver_opciones(request, categoria_id):
 
 @login_required
 def registrar_voto(request):
-    if request.method == 'POST':
-        opcion_id = request.POST.get('opcion_id')
-        
-        if not opcion_id:
-            messages.error(request, "Debes seleccionar una opción.")
-            return redirect('lista_categorias')
+    # Esta vista solo registra votos enviados mediante POST.
+    if request.method != "POST":
+        return redirect("lista_categorias")
 
-        opcion = get_object_or_404(Opcion, id=opcion_id)
-        votacion = opcion.votacion
-        categoria = votacion.categoria
-        edicion = categoria.edicion
-        ahora = timezone.now()
+    # Comprobamos que se haya seleccionado una opción.
+    opcion_id = request.POST.get("opcion_id")
+    if not opcion_id:
+        messages.error(request, "Debes seleccionar una opción.")
+        return redirect("lista_categorias")
 
-        # 1. Validar que la edición esté activa
-        if not edicion.activa:
-            messages.error(request, "Esta edición está cerrada. No se permiten votos.")
-            return redirect('lista_categorias')
+    # Buscamos la opción; si no existe, Django responde con 404.
+    opcion = get_object_or_404(Opcion, pk=opcion_id)
 
-        # 2. Validar que estemos dentro del rango de fechas
-        if not (votacion.fecha_inicio <= ahora <= votacion.fecha_fin):
-            messages.error(request, "La votación está cerrada o no ha comenzado.")
-            return redirect('lista_categorias')
+    # Obtenemos la votación, categoría y edición relacionadas con la opción.
+    votacion = opcion.votacion
+    categoria = votacion.categoria
+    edicion = categoria.edicion
+    ahora = timezone.now()
 
-        # 3. Validar duplicados
-        if Voto.objects.filter(usuario=request.user, categoria=categoria, edicion=edicion).exists():
-            messages.error(request, "Error: Ya has votado en esta categoría.")
-            return redirect('lista_categorias')
+    # No se puede votar en una edición que está cerrada.
+    if not edicion.activa:
+        messages.error(
+            request,
+            "Esta edición está cerrada. No se permiten votos."
+        )
+        return redirect("lista_categorias")
 
-        # 4. Registrar el voto
-        try:
+    # La fecha actual debe estar entre el inicio y el cierre de la votación.
+    if not (votacion.fecha_inicio <= ahora <= votacion.fecha_fin):
+        messages.error(
+            request,
+            "La votación está cerrada o todavía no ha comenzado."
+        )
+        return redirect("lista_categorias")
+
+    # Esta comprobación da una respuesta clara en los duplicados normales.
+    ya_voto = Voto.objects.filter(
+        usuario=request.user,
+        categoria=categoria,
+        edicion=edicion,
+    ).exists()
+
+    if ya_voto:
+        messages.error(request, "Ya has votado en esta categoría.")
+        return redirect("lista_categorias")
+
+    try:
+        # La transacción agrupa el intento de registro del voto.
+        with transaction.atomic():
             Voto.objects.create(
                 usuario=request.user,
                 categoria=categoria,
                 edicion=edicion,
-                opcion=opcion
+                opcion=opcion,
             )
-            messages.success(request, f"¡Voto registrado por {opcion.nombre}!")
-        except IntegrityError:
-            messages.error(request, "Error de integridad: Tu voto ya fue registrado.")
-            
-        return redirect('lista_categorias')
-    
-    return redirect('lista_categorias')
 
-# --- VISTA DE RESULTADOS CON TARJETAS RESUMEN Y GRÁFICOS (SOLO ADMIN) ---
+    except IntegrityError:
+        # La restricción única de la base de datos protege contra
+        # dos solicitudes simultáneas del mismo usuario.
+        messages.error(request, "Ya has votado en esta categoría.")
+    else:
+        messages.success(
+            request,
+            f"¡Voto registrado por {opcion.nombre}!"
+        )
+
+    return redirect("lista_categorias")
+
+# --- VISTA DE RESULTADOS CON TARJETAS RESUMEN Y GRÁFICOS ---
 
 @staff_member_required
 def resultados(request):

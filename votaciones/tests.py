@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Edicion, Categoria, Votacion, Opcion
+from .models import Edicion, Categoria, Votacion, Opcion,Voto
 
 
 class ModelosTest(TestCase):
@@ -97,3 +97,98 @@ class AutenticacionTest(TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
         
 # Create your tests here.
+class RegistroVotoTest(TestCase):
+    def setUp(self):
+        # Preparamos una edición, categoría, votación y opción válidas.
+        ahora = timezone.now()
+
+        self.usuario = User.objects.create_user(
+            username="votante_prueba",
+            password="ClaveSegura#2027",
+        )
+        self.edicion = Edicion.objects.create(
+            anio=2027,
+            activa=True,
+        )
+        self.categoria = Categoria.objects.create(
+            nombre="Categoría de prueba",
+            edicion=self.edicion,
+        )
+        self.votacion = Votacion.objects.create(
+            nombre="Votación de prueba",
+            categoria=self.categoria,
+            fecha_inicio=ahora - timedelta(hours=1),
+            fecha_fin=ahora + timedelta(hours=1),
+        )
+        self.opcion = Opcion.objects.create(
+            nombre="Opción de prueba",
+            votacion=self.votacion,
+        )
+
+        # Iniciamos sesión para enviar votos como usuario autenticado.
+        self.client.force_login(self.usuario)
+        self.url = reverse("registrar_voto")
+
+    def enviar_voto(self):
+        # Enviamos el identificador de la opción seleccionada.
+        return self.client.post(
+            self.url,
+            {"opcion_id": self.opcion.pk},
+        )
+
+    def test_usuario_puede_registrar_un_voto(self):
+        respuesta = self.enviar_voto()
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(
+            Voto.objects.filter(
+                usuario=self.usuario,
+                categoria=self.categoria,
+                edicion=self.edicion,
+            ).count(),
+            1,
+        )
+
+    def test_usuario_no_puede_votar_dos_veces(self):
+        self.enviar_voto()
+        respuesta = self.enviar_voto()
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(
+            Voto.objects.filter(
+                usuario=self.usuario,
+                categoria=self.categoria,
+                edicion=self.edicion,
+            ).count(),
+            1,
+        )
+
+    def test_no_permite_votar_si_la_edicion_esta_cerrada(self):
+        self.edicion.activa = False
+        self.edicion.save()
+
+        self.enviar_voto()
+
+        self.assertEqual(Voto.objects.count(), 0)
+
+    def test_no_permite_votar_antes_de_que_inicie_la_votacion(self):
+        self.votacion.fecha_inicio = timezone.now() + timedelta(days=1)
+        self.votacion.save()
+
+        self.enviar_voto()
+
+        self.assertEqual(Voto.objects.count(), 0)
+
+    def test_no_permite_votar_despues_del_cierre(self):
+        self.votacion.fecha_fin = timezone.now() - timedelta(days=1)
+        self.votacion.save()
+
+        self.enviar_voto()
+
+        self.assertEqual(Voto.objects.count(), 0)
+
+    def test_no_permite_votar_sin_seleccionar_opcion(self):
+        respuesta = self.client.post(self.url, {})
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(Voto.objects.count(), 0)
